@@ -20,79 +20,39 @@ VerifAIble is an AI-powered content creation platform where **every AI response 
 
 ## Key Features
 
-### Agent System & Tool Use
+### AI Agent with 18 Built-in Tools
 
-A self-developed Agent SDK (`verifaible-agent-sdk`) implements a complete **Tool Loop**: model reasoning → tool calls → result feedback → continued reasoning. The Agent is equipped with **18 built-in tools** (file I/O, shell execution, web search & analysis, citation creation, image generation, etc.) with progressive tool discovery and sub-agent orchestration.
+VerifAIble's AI doesn't just generate text — it **takes action**. The built-in Agent autonomously searches the web, navigates pages, extracts data, and creates citations through a complete tool loop (reasoning → tool calls → result feedback → continued reasoning). It supports progressive tool discovery and sub-agent orchestration for complex multi-step tasks.
 
-### Multi-Provider Abstraction
+### 7 Providers, 12+ Models — Your Choice
 
-Unified routing layer via OpenRouter connecting **7 providers and 12+ models**: OpenAI (GPT-5.1/5.2), Google Gemini (3-Pro/3-Flash), DeepSeek (Chat/R1), Anthropic (Claude Sonnet 4.6), MiniMax (M2.5), Zhipu (GLM-5), and Moonshot (Kimi-K2.5). Hot-swappable model switching with streaming SSE responses.
+Switch between **12+ LLMs** from 7 providers with one click: OpenAI (GPT-5.1/5.2), Google Gemini (3-Pro/3-Flash), DeepSeek (Chat/R1), Anthropic (Claude Sonnet 4.6), MiniMax (M2.5), Zhipu (GLM-5), and Moonshot (Kimi-K2.5). Each model streams responses in real-time via SSE.
 
-### Verifiable Citations
+### Verifiable Citations — 7 Evidence Types
 
-The **VerifAIble Link** system — a custom URL hash protocol (`#verifaible:anchor=...&text=...&id=...&claim=...&evidence_type=...`) — enables precise playback and source tracing for **7 evidence types**: webpage, text, table, PDF, video, document, and image. Features include:
-- **Text**: DOM traversal + anchor/context dual-layer highlighting + fuzzy date matching
-- **Table**: Row-column crosshair positioning with rowspan/colspan support
-- **PDF**: Redirect to built-in PDF.js viewer with page + anchor navigation
-- **Video**: YouTube timestamp auto-jump with player render detection
-- **Dynamic pages**: Action Steps Replay — record and replay user interaction sequences (click/input/scroll/JS execution)
-- **Fault tolerance**: 6-level delayed retry (500ms → 5s) for AJAX-loaded content
+Every claim can be traced back to its source. Click any citation to see the **original content highlighted** on the source page. Supports 7 evidence types:
 
-### Microservice Architecture
+| Type | How It Works |
+|------|-------------|
+| **Text** | Highlights the exact sentence on the source page |
+| **Table** | Crosshair positioning on the exact row and column |
+| **PDF** | Opens built-in PDF viewer, jumps to the right page and passage |
+| **Video** | Jumps to the exact timestamp in a YouTube video |
+| **Dynamic Page** | Replays browser actions (clicks, date pickers, JS) then highlights |
+| **Document** | Links to uploaded documents with anchor navigation |
+| **Image** | Links to source images with metadata |
 
-6 independent services powering the platform:
+### Built-in Research Browser
 
-| Service | Tech | Responsibility |
-|---------|------|---------------|
-| API Gateway | FastAPI | Request routing, CORS, auth middleware, rate limiting |
-| Auth Service | FastAPI | Google OAuth 2.0, email verification (Resend), JWT |
-| Chat Service | FastAPI | Multi-model LLM dialogue, SSE streaming, citation mode |
-| Agent Service | FastAPI | AI agent execution, tool loop, multi-turn conversation |
-| Evidence Service | Playwright | Web screenshot capture, evidence storage & indexing, public sharing |
-| LLM Gateway | — | Unified LLM API routing |
+No need to switch between apps. VerifAIble includes a **built-in Chromium browser** with split-view — chat with AI on one side, browse and verify sources on the other. Organize your research with workspaces and tabs.
 
----
+### Cross-Platform
 
-## Architecture
+Available on **macOS**, **Windows**, **Android**, and the **Web**. Desktop apps built with Electron, mobile with Capacitor, all sharing the same Vue 3 frontend.
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        Client Layer                             │
-│  ┌──────────────┐  ┌──────────────┐  ┌────────────────────────┐ │
-│  │   Electron   │  │   Android    │  │     Web Browser        │ │
-│  │  (Vue 3 +    │  │  (Capacitor) │  │  (ai.verifaible.space) │ │
-│  │   Pinia)     │  │              │  │                        │ │
-│  └──────┬───────┘  └──────┬───────┘  └───────────┬────────────┘ │
-└─────────┼─────────────────┼──────────────────────┼──────────────┘
-          │                 │                      │
-          └─────────────────┼──────────────────────┘
-                            │ HTTPS / SSE
-          ┌─────────────────▼──────────────────┐
-          │          API Gateway (:8000)        │
-          │     FastAPI · CORS · JWT Auth       │
-          └──┬──────┬──────────┬───────────┬───┘
-             │      │          │           │
-     ┌───────▼──┐ ┌─▼────────┐│┌──────────▼────────┐
-     │   Auth   │ │   Chat   │││   Agent Service   │
-     │  (:8001) │ │  (:8002) │││     (:8003)       │
-     │ OAuth+JWT│ │ SSE+LLM  │││ Tool Loop · 18    │
-     └──────────┘ └──────────┘││ tools · Sub-agent  │
-                              │└────────────────────┘
-                   ┌──────────▼────────┐
-                   │ Evidence Service  │
-                   │   Playwright      │
-                   │ Screenshot+Share  │
-                   └───────────────────┘
-                              │
-          ┌───────────────────▼───────────────────┐
-          │           LLM Gateway                 │
-          │  OpenRouter → 7 Providers · 12 Models │
-          └───────────────────────────────────────┘
-                              │
-          ┌───────────────────▼───────────────────┐
-          │         PostgreSQL 15 + Redis 7        │
-          └────────────────────────────────────────┘
-```
+### Multi-Language Support
+
+Full UI support for **English**, **简体中文**, and **日本語**.
 
 ---
 
@@ -111,24 +71,11 @@ Coming soon
 
 ---
 
-## Tech Stack
-
-| Layer | Technologies |
-|-------|-------------|
-| Frontend | Vue 3, TypeScript, Pinia, Electron, Chromium (built-in browser), Tailwind CSS |
-| Backend | FastAPI, Python 3.11+, SQLAlchemy, Pydantic |
-| Database | PostgreSQL 15, Redis 7 |
-| LLM | OpenAI API, Gemini API, DeepSeek API, Anthropic Claude API, OpenRouter |
-| DevOps | Docker, Docker Compose, PNPM, Poetry |
-| Tools | Playwright, Resend, JWT, Capacitor (Android) |
-
----
-
 ## Related Projects
 
 | Project | Description |
 |---------|-------------|
-| [verifaible-bench](https://github.com/ChizhongWang/verifaible-bench) | Benchmark framework for evaluating LLM agents on verifiable evidence collection |
+| [verifaible-bench](https://github.com/ChizhongWang/verifaible-bench) | Benchmark for evaluating LLM agents on verifiable evidence collection (6 models, 21 test cases) |
 | [verifaible-model](https://github.com/ChizhongWang/verifaible-model) | SFT fine-tuning for evidence collection capabilities |
 
 ---

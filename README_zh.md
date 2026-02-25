@@ -20,79 +20,39 @@ VerifAIble 是一个 AI 辅助内容创作平台，**每一条 AI 回复都有�
 
 ## 核心特性
 
-### Agent 系统与工具调用
+### AI Agent，内置 18 种工具
 
-自研 Agent SDK（`verifaible-agent-sdk`）实现完整的 **Tool Loop**：模型推理 → 工具调用 → 结果回传 → 继续推理。Agent 内置 **18 种工具**（文件读写、Shell 执行、网页搜索与分析、引文创建、图片生成等），支持渐进式工具发现和子 Agent 编排。
+VerifAIble 的 AI 不只是生成文本 —— 它会**主动行动**。内置 Agent 自主搜索网页、导航页面、提取数据、创建引文，通过完整的工具调用循环（推理 → 工具调用 → 结果回传 → 继续推理）完成任务。支持渐进式工具发现和子 Agent 编排，处理复杂多步骤任务。
 
-### 多模型 Provider 抽象
+### 7 大服务商，12+ 个模型，随心切换
 
-通过 OpenRouter 统一路由层接入 **7 大服务商、12+ 个模型**：OpenAI (GPT-5.1/5.2)、Google Gemini (3-Pro/3-Flash)、DeepSeek (Chat/R1)、Anthropic (Claude Sonnet 4.6)、MiniMax (M2.5)、智谱 (GLM-5)、Moonshot (Kimi-K2.5)。支持模型热切换，SSE 流式响应。
+一键切换 **7 大服务商的 12+ 个大模型**：OpenAI (GPT-5.1/5.2)、Google Gemini (3-Pro/3-Flash)、DeepSeek (Chat/R1)、Anthropic (Claude Sonnet 4.6)、MiniMax (M2.5)、智谱 (GLM-5)、Moonshot (Kimi-K2.5)。所有模型均支持 SSE 实时流式响应。
 
-### 可验证引文
+### 可验证引文 — 7 种证据类型
 
-**VerifAIble Link** 引文验证机制 —— 自定义 URL hash 协议（`#verifaible:anchor=...&text=...&id=...&claim=...&evidence_type=...`），实现 **7 种证据类型**的精准回放与溯源：网页、文本、表格、PDF、视频、文档、图片。具体包括：
-- **文本**：DOM 遍历定位 + 锚点/上下文双层高亮 + 日期模糊匹配（多国格式互通）
-- **表格**：行列十字准星定位，处理 rowspan/colspan 合并单元格
-- **PDF**：重定向到自研 PDF.js 阅读器，按页 + 锚点定位
-- **视频**：YouTube 时间戳自动跳转，等待播放器渲染后触发
-- **动态页面**：Action Steps Replay —— 录制用户操作序列（点击/输入/滚动/JS 执行），回放后注入 hash 触发高亮
-- **容错**：6 级延迟重试（500ms → 5s）适配 AJAX 异步加载内容
+每一条论断都可溯源。点击任意引文即可在原始页面上看到**高亮标注的源内容**。支持 7 种证据类型：
 
-### 微服务架构
+| 类型 | 工作方式 |
+|-----|---------|
+| **文本** | 在源页面上高亮定位原文语句 |
+| **表格** | 行列十字准星定位到精确的单元格 |
+| **PDF** | 内置 PDF 阅读器，跳转到对应页面和段落 |
+| **视频** | 跳转到 YouTube 视频的精确时间戳 |
+| **动态页面** | 回放浏览器操作（点击、日期选择、JS 执行）后高亮 |
+| **文档** | 链接到上传文档，锚点导航 |
+| **图片** | 链接到源图片，附带元数据 |
 
-6 个独立服务支撑平台运行：
+### 内置研究浏览器
 
-| 服务 | 技术 | 职责 |
-|-----|------|------|
-| API Gateway | FastAPI | 请求路由、CORS、认证中间件、限流 |
-| Auth Service | FastAPI | Google OAuth 2.0、邮箱验证（Resend）、JWT |
-| Chat Service | FastAPI | 多模型 LLM 对话、SSE 流式响应、引文模式 |
-| Agent Service | FastAPI | AI 智能体执行、工具调用循环、多轮对话 |
-| Evidence Service | Playwright | 网页截图采集、证据存储与索引、公开分享 |
-| LLM Gateway | — | 统一 LLM API 路由 |
+无需在应用间切换。VerifAIble 内置 **Chromium 浏览器**，支持分屏视图 —— 一边与 AI 对话，一边浏览和验证来源。用工作区和标签页管理你的研究资料。
 
----
+### 跨平台
 
-## 系统架构
+支持 **macOS**、**Windows**、**Android** 和 **Web**。桌面端基于 Electron，移动端基于 Capacitor，共享同一套 Vue 3 前端代码。
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                          客户端层                                │
-│  ┌──────────────┐  ┌──────────────┐  ┌────────────────────────┐ │
-│  │   Electron   │  │   Android    │  │     Web 浏览器          │ │
-│  │  (Vue 3 +    │  │  (Capacitor) │  │  (ai.verifaible.space) │ │
-│  │   Pinia)     │  │              │  │                        │ │
-│  └──────┬───────┘  └──────┬───────┘  └───────────┬────────────┘ │
-└─────────┼─────────────────┼──────────────────────┼──────────────┘
-          │                 │                      │
-          └─────────────────┼──────────────────────┘
-                            │ HTTPS / SSE
-          ┌─────────────────▼──────────────────┐
-          │        API Gateway (:8000)         │
-          │    FastAPI · CORS · JWT 认证        │
-          └──┬──────┬──────────┬───────────┬───┘
-             │      │          │           │
-     ┌───────▼──┐ ┌─▼────────┐│┌──────────▼────────┐
-     │  认证服务 │ │  对话服务  │││    Agent 服务      │
-     │  (:8001) │ │  (:8002) │││     (:8003)       │
-     │ OAuth+JWT│ │ SSE+LLM  │││ Tool Loop · 18    │
-     └──────────┘ └──────────┘││ 工具 · 子 Agent     │
-                              │└────────────────────┘
-                   ┌──────────▼────────┐
-                   │    证据服务        │
-                   │   Playwright      │
-                   │  截图 + 公开分享    │
-                   └───────────────────┘
-                              │
-          ┌───────────────────▼───────────────────┐
-          │           LLM Gateway                 │
-          │  OpenRouter → 7 大服务商 · 12 个模型    │
-          └───────────────────────────────────────┘
-                              │
-          ┌───────────────────▼───────────────────┐
-          │         PostgreSQL 15 + Redis 7        │
-          └────────────────────────────────────────┘
-```
+### 多语言支持
+
+完整支持 **English**、**简体中文**、**日本語** 三种界面语言。
 
 ---
 
@@ -111,24 +71,11 @@ VerifAIble 是一个 AI 辅助内容创作平台，**每一条 AI 回复都有�
 
 ---
 
-## 技术栈
-
-| 层级 | 技术 |
-|-----|------|
-| 前端 | Vue 3, TypeScript, Pinia, Electron, Chromium (内置浏览器), Tailwind CSS |
-| 后端 | FastAPI, Python 3.11+, SQLAlchemy, Pydantic |
-| 数据库 | PostgreSQL 15, Redis 7 |
-| LLM | OpenAI API, Gemini API, DeepSeek API, Anthropic Claude API, OpenRouter |
-| DevOps | Docker, Docker Compose, PNPM, Poetry |
-| 工具 | Playwright, Resend, JWT, Capacitor (Android) |
-
----
-
 ## 相关项目
 
 | 项目 | 描述 |
 |-----|------|
-| [verifaible-bench](https://github.com/ChizhongWang/verifaible-bench) | LLM Agent 可验证证据采集能力评测框架 |
+| [verifaible-bench](https://github.com/ChizhongWang/verifaible-bench) | LLM Agent 可验证证据采集能力评测框架（6 个模型、21 个测试用例） |
 | [verifaible-model](https://github.com/ChizhongWang/verifaible-model) | 证据采集能力 SFT 微调 |
 
 ---
